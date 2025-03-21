@@ -117,7 +117,7 @@ T Last(T& ref);
 BNM::IL2CPP::Il2CppObject* LoadSystemFont(const std::string& fontName, int fontSize = 16);
 BNM::IL2CPP::Il2CppObject* LoadResourceFont(const std::string& resourcePath);
 void scrShowlfDebug(BNM::UnityEngine::Object *instance);
-void AddText(std::string text,float x,float y,int textSize,BNM::Structures::Unity::Color color,BNM::Structures::Unity::Color shadowColor, BNM::Structures::Unity::Vector2 shadowOffset,BNM::IL2CPP::Il2CppObject *font = nullptr,TextAnchor alignment = UpperLeft);
+void AddText(std::string text,float x,float y,int textSize,BNM::Structures::Unity::Color color,BNM::Structures::Unity::Color shadowColor, BNM::Structures::Unity::Vector2 shadowOffset,TextAnchor alignment = UpperLeft);
 std::string FormatFloatToString(float value, std::ostringstream& ss);
 std::string BoolToStr(bool value);
 std::string DifficultyToStr(Difficulty value);
