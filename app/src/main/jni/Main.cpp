@@ -526,6 +526,27 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
         }
     }
 */    
+    Method<int> getHitsMethod = Class("","scrMistakesManager").GetMethod("GetHits");
+    int tooEarlyNumValue = getHitsMethod[mistakesManager].Call(0);
+    tooEarlyNum = tooEarlyNumValue;
+    int veryEarlyNumValue = getHitsMethod[mistakesManager].Call(1);
+    veryEarlyNum = veryEarlyNumValue;
+    int earlyPerfectNumValue = getHitsMethod[mistakesManager].Call(2);
+    earlyPerfectNum = earlyPerfectNumValue;
+    int perfectNumValue = getHitsMethod[mistakesManager].Call(3);
+    perfectNum = perfectNumValue;
+    int latePerfectNumValue = getHitsMethod[mistakesManager].Call(4);
+    latePerfectNum = latePerfectNumValue;
+    int veryLateNumValue = getHitsMethod[mistakesManager].Call(5);
+    veryLateNum = veryLateNumValue;
+    int tooLateNumValue = getHitsMethod[mistakesManager].Call(6);
+    tooLateNum = tooLateNumValue;
+    int multipressNumValue = getHitsMethod[mistakesManager].Call(7);
+    multipressNum = multipressNumValue;
+    int failMissNumValue = getHitsMethod[mistakesManager].Call(8);
+    failMissNum = failMissNumValue;
+    int failOverloadNumValue = getHitsMethod[mistakesManager].Call(9);
+    failOverloadNum = failOverloadNumValue;
 }
 
 void startPlay(UnityEngine::Object *instance) {
@@ -821,6 +842,89 @@ bool isTwirl() {
     Field<bool> isCW = scrController.GetField("isCW");
     return isCW[instance.Get()].Get();
 }
+// 使用 const 修饰符防止意外修改
+struct Translation {
+    const char* autoplay;
+    const char* autoTile;
+};
+
+// 优化点1: 使用 unordered_map 并声明为 const 提升查找性能
+const std::unordered_map<std::string, SystemLanguage> languageMap = {
+    {"ChineseSimplified", SystemLanguage::ChineseSimplified},
+    {"German", SystemLanguage::German},
+    {"Japanese", SystemLanguage::Japanese},
+    {"Korean", SystemLanguage::Korean},
+    {"ChineseTraditional", SystemLanguage::ChineseTraditional},
+    {"Czech", SystemLanguage::Czech},
+    {"Vietnamese", SystemLanguage::Vietnamese},
+    {"Russian", SystemLanguage::Russian},
+    {"Romanian", SystemLanguage::Romanian},
+    {"Polish", SystemLanguage::Polish},
+    {"French", SystemLanguage::French},
+    {"Portuguese", SystemLanguage::Portuguese},
+    {"Spanish", SystemLanguage::Spanish},
+    {"English", SystemLanguage::English},
+};
+
+// 优化点2: 改用 unordered_map 提升查找效率
+// 注意：需确保 SystemLanguage 已实现哈希函数
+std::unordered_map<SystemLanguage, Translation> translations = {
+    {SystemLanguage::ChineseSimplified, {"\n                  自动播放", "\n                  自动方块"}},
+    {SystemLanguage::German, {"\n                  Automatische Wiedergabe", "\n                  Automatischer Block"}},
+    {SystemLanguage::Japanese, {"\n                                      自動再生", "\n                                      自動タイル"}},
+    {SystemLanguage::Korean, {"\n                  자동 플레이", "\n                  자동 플레이 타일"}},
+    {SystemLanguage::ChineseTraditional, {"\n                  自動播放", "\n                  自動格子"}},
+    {SystemLanguage::Czech, {"\n                  Automatické-Hraní", "\n                  Automatické Dlaždice"}},
+    {SystemLanguage::Vietnamese, {"\n                  Tự chơi", "\n                  Gạch tự chơi"}},
+    {SystemLanguage::Russian, {"\n                  Автоигра", "\n                  Авто тайл"}},
+    {SystemLanguage::Romanian, {"\n                  Redare automată", "\n                  Placă auto"}},
+    {SystemLanguage::Polish, {"\n                  Automatyczne odtwarzanie", "\n                  Automatyczne klocki"}},
+    {SystemLanguage::French, {"\n                  Jeu-automatique", "\n                  Tuile automatique"}},
+    {SystemLanguage::Portuguese, {"\n                  Automático", "\n                  Piso Automático"}},
+    {SystemLanguage::Spanish, {"\n                  Automático", "\n                  Piso Automático"}},
+    {SystemLanguage::English, {"\n                  Autoplay", "\n                  Auto tile"}},
+};
+
+// 优化点3: 使用 const 引用避免拷贝
+SystemLanguage StringToSystemLanguage(const std::string& languageStr) {
+    const auto it = languageMap.find(languageStr);
+    return it != languageMap.end() ? it->second : SystemLanguage::English;
+}
+
+String* (*old_Persistence_GetLanguage)();
+String* Persistence_GetLanguageMet() {
+    return old_Persistence_GetLanguage();
+}
+
+// 优化点4: 合并多次字符串操作
+SystemLanguage Persistence_GetLanguageMet_language() {
+    if (String* languageStr = Persistence_GetLanguageMet()) {
+        return StringToSystemLanguage(languageStr->str());
+    }
+    return SystemLanguage::English;
+}
+
+String* (*old_RDString_Get)(String*, Dictionary<String*, Il2CppObject*>*);
+String* RDString_Get(String* key, Dictionary<String*, Il2CppObject*>* parameters) {
+    // 优化点5: 缓存 key->str() 结果
+    const std::string keyStr = key->str();
+    
+    // 优化点6: 提前判断高频 key 提升分支预测
+    if (keyStr == "status.autoplay" || keyStr == "status.autoTile") {
+        const SystemLanguage language = Persistence_GetLanguageMet_language();
+        if (const auto it = translations.find(language); it != translations.end()) {
+            return CreateMonoString(
+                keyStr == "status.autoplay" ? 
+                it->second.autoplay : 
+                it->second.autoTile
+            );
+        }
+    }
+
+    // 优化点7: 使用短路表达式简化代码
+    return old_RDString_Get ? old_RDString_Get(key, parameters) : key;
+}
+
 
 void (*old_OnGUI)(UnityEngine::Object *);
 void OnGUI(UnityEngine::Object *instance) {
@@ -840,15 +944,16 @@ void OnGUI(UnityEngine::Object *instance) {
 
  
     if (isStarted) {
+        
         float totalLength = totalTime;
         std::string totalLengthFormatted = secondsToMMSS(totalLength);
 
         float currentTime = musicTime;
         std::string currentTimeFormatted = secondsToMMSS(currentTime);
         std::string mapTimeFormatted = secondsToMMSS(mapTime);
-        Il2CppObject* customFont = LoadResourceFont("/sdcard/Font/Maplestory OTF Bold");
+        //Il2CppObject* customFont = LoadResourceFont("/sdcard/Font/Maplestory OTF Bold");
         char text[256 * 16];
-    sprintf(text,"<b>"
+    sprintf(text,//"<b>"
                  "Tile BPM | %.2f\n"
                  "Highest T BPM | %.2f\n"
                  "Cur BPM | %.2f\n"
@@ -858,15 +963,15 @@ void OnGUI(UnityEngine::Object *instance) {
                  "Music Time | %s ~ %s\n"
                  "Map Time | %s\n"
                  "Attempt | %d\n"
-                 "Checkpoint | %d\n\n"
+                 "Check Point | %d\n\n"
                  "Progress | %.2f%%\n"
                  "X-ACC | %.2f%%\n"
                  "ACC | %.2f%%\n\n"
                  "Perfect Combo | %d\n"
                  "Timing | %.2f \n"
                  "Timing Scale | %d%%\n"
-                 " \t\t\t\t\t \n\n\n\n\n\n\n\n"
-                 "                 <size=30>"
+                 " \t\t\t\t\t \n"
+                 "                 <size=42>"
                  "<color=#E69AF6>%d</color> "
                  "<color=#FF0000>%d</color> "
                  "<color=#FF3333>%d</color> "
@@ -878,7 +983,8 @@ void OnGUI(UnityEngine::Object *instance) {
                  "<color=#00FFFF>%d</color> "
                  "<color=#E69AF6>%d</color>"
                  "</size>"
-                 "</b>",
+                 //"</b>"
+                 ,
             
             curBPM,
             highestBPM,
@@ -898,9 +1004,9 @@ void OnGUI(UnityEngine::Object *instance) {
             ms, margin, failOverloadNum, tooEarlyNum, veryEarlyNum, earlyPerfectNum, perfectNum,
             latePerfectNum, veryLateNum, tooLateNum, multipressNum, failMissNum);
             // 以下为自定义颜色
-    /*
+    
         
-
+/*
     const Color white = Color(1.0f, 1.0f, 1.0f);    // 白色
     const Color golden = Color(255.0f / 255.0f, 215.0f / 255.0f, 0.0f / 255.0f); // 金色
     const Color purple = Color(1.0f, 0.0f, 1.0f);   // 紫色
@@ -941,7 +1047,7 @@ void OnGUI(UnityEngine::Object *instance) {
     Color mapTime = timeProgressColor;
     // 格式化字符串，插入颜色
     char text[256 * 16];
-    sprintf(text,"<b>"
+    sprintf(text,//"<b>"
                  "Tile BPM | <color=#%02X%02X%02X>%.2f</color>\n"
                  "Highest T BPM | <color=#%02X%02X%02X>%.2f</color>\n"
                  "Cur BPM | <color=#%02X%02X%02X>%.2f</color>\n"
@@ -951,15 +1057,15 @@ void OnGUI(UnityEngine::Object *instance) {
                  "Music Time | <color=#%02X%02X%02X>%s</color> ~ <color=#%02X%02X%02X>%s</color>\n"
                  "Map Time | <color=#%02X%02X%02X>%s</color>\n"
                  "Attempt | %d\n"
-                 "Checkpoint | %d\n\n"
+                 "Check Point | %d\n\n"
                  "Progress | <color=#%02X%02X%02X>%.2f%%</color>\n"
                  "X-ACC | <color=#%02X%02X%02X>%.2f%%</color>\n"
                  "ACC | <color=#%02X%02X%02X>%.2f%%</color>\n\n"
                  "Perfect Combo | <color=#%02X%02X%02X>%d</color>\n"
                  "Timing | %.2f \n"
                  "Timing Scale | %d%%\n"
-                 " \t\t\t\t\t \n\n\n\n\n\n\n\n"
-                 "                 <size=30>"
+                 " \t\t\t\t\t \n"
+                 "                 <size=42>"
                  "<color=#E69AF6>%d</color> "
                  "<color=#FF0000>%d</color> "
                  "<color=#FF3333>%d</color> "
@@ -971,7 +1077,8 @@ void OnGUI(UnityEngine::Object *instance) {
                  "<color=#00FFFF>%d</color> "
                  "<color=#E69AF6>%d</color>"
                  "</size>"
-                 "</b>",
+                 //"</b>"
+                 ,
             
             // Tile BPM 颜色
             (int)(bpmColor.r * 255), (int)(bpmColor.g * 255), (int)(bpmColor.b * 255),
@@ -1035,7 +1142,7 @@ void OnGUI(UnityEngine::Object *instance) {
             */
             
      //   AddText(result,40,930,30,Color(1.0f,1.0f,1.0f),nullptr,UpperCenter);
-        AddText(text,40,30,32,Color(1.0f,1.0f,1.0f),Color(0.f,0.f,0.f,0.4f),Vector2(2,2),customFont);
+        AddText(text,250,30,40,Color(1.0f,1.0f,1.0f),Color(0.f,0.f,0.f,0.5f),Vector2(2,2),UpperCenter);
         old_OnGUI(instance);
     } else  {
         if (devValue == true) {
@@ -1051,7 +1158,7 @@ void OnGUI(UnityEngine::Object *instance) {
 
 //显示
 void AddText(string text, float x, float y, int textSize, Color color, 
-            Color shadowColor, Vector2 shadowOffset, Il2CppObject* font, TextAnchor alignment) 
+            Color shadowColor, Vector2 shadowOffset, TextAnchor alignment) 
 {
     static Class GUIStyleClass = Class("UnityEngine", "GUIStyle");
     static Class GUIContentClass = Class("UnityEngine", "GUIContent");
@@ -1072,9 +1179,18 @@ void AddText(string text, float x, float y, int textSize, Color color,
         setAlignment[style].Call(alignment);
         
         // 设置字体
-        if (font != nullptr) {
-            Method<void> setFont = GUIStyleClass.GetMethod("set_font");
-            setFont[style].Call(font);
+        UnityEngine::Object* Onstants = getFieldValue<UnityEngine::Object *>("","RDConstants","internalData");
+        Field<UnityEngine::Object*> chineseFont = Class("","RDConstants").GetField("chineseFont");
+        Field<UnityEngine::Object*> koreanFont = Class("","RDConstants").GetField("koreanFont");
+        Method<void> setFont = GUIStyleClass.GetMethod("set_font");
+        String* currentLanguage = Persistence_GetLanguageMet();
+        std::string currentLang = currentLanguage ? currentLanguage->str() : "";
+
+        // 根据实际内容判断语言
+        if (currentLang != "ChineseSimplified") {
+            setFont[style].Call(koreanFont[Onstants].Get());
+        } else {
+            setFont[style].Call(chineseFont[Onstants].Get());
         }
     };
 
@@ -1256,31 +1372,24 @@ void AddHitMet(UnityEngine::Object *instance, HitMargin hit) {
     switch (hit) {
         case TooEarly:
             score += 30;
-            tooEarlyNum++;
             break;
         case TooLate:
             score += 30;
-            tooLateNum++;
             break;
         case VeryEarly:
             score += 75;
-            veryEarlyNum++;
             break;
         case VeryLate:
             score += 75;
-            veryLateNum++;
             break;
         case EarlyPerfect:
             score += 150;
-            earlyPerfectNum++;
             break;
         case LatePerfect:
             score += 150;
-            latePerfectNum++;
             break;
         case Perfect:
             score += 300;
-            perfectNum++;
             break;
         default:
             
@@ -1289,17 +1398,14 @@ void AddHitMet(UnityEngine::Object *instance, HitMargin hit) {
 
     if (hit == Multipress) {
         score -= 50;
-        multipressNum++;
     }
 
     if (hit == FailMiss) {
         score -= 100;
-        failMissNum++;
     }
 
     if (hit == FailOverload) {
         score -= 200;
-        failOverloadNum++;
     }
     
         if (hit == Perfect) {
@@ -1327,88 +1433,7 @@ void ShowHitTextMet(UnityEngine::Object *instance,HitMargin hitMargin,Vector3 po
     }
 }
 
-// 使用 const 修饰符防止意外修改
-struct Translation {
-    const char* autoplay;
-    const char* autoTile;
-};
 
-// 优化点1: 使用 unordered_map 并声明为 const 提升查找性能
-const std::unordered_map<std::string, SystemLanguage> languageMap = {
-    {"ChineseSimplified", SystemLanguage::ChineseSimplified},
-    {"German", SystemLanguage::German},
-    {"Japanese", SystemLanguage::Japanese},
-    {"Korean", SystemLanguage::Korean},
-    {"ChineseTraditional", SystemLanguage::ChineseTraditional},
-    {"Czech", SystemLanguage::Czech},
-    {"Vietnamese", SystemLanguage::Vietnamese},
-    {"Russian", SystemLanguage::Russian},
-    {"Romanian", SystemLanguage::Romanian},
-    {"Polish", SystemLanguage::Polish},
-    {"French", SystemLanguage::French},
-    {"Portuguese", SystemLanguage::Portuguese},
-    {"Spanish", SystemLanguage::Spanish},
-    {"English", SystemLanguage::English},
-};
-
-// 优化点2: 改用 unordered_map 提升查找效率
-// 注意：需确保 SystemLanguage 已实现哈希函数
-std::unordered_map<SystemLanguage, Translation> translations = {
-    {SystemLanguage::ChineseSimplified, {"\n                  自动播放", "\n                  自动方块"}},
-    {SystemLanguage::German, {"\n                  Automatische Wiedergabe", "\n                  Automatischer Block"}},
-    {SystemLanguage::Japanese, {"\n                                      自動再生", "\n                                      自動タイル"}},
-    {SystemLanguage::Korean, {"\n                  자동 플레이", "\n                  자동 플레이 타일"}},
-    {SystemLanguage::ChineseTraditional, {"\n                  自動播放", "\n                  自動格子"}},
-    {SystemLanguage::Czech, {"\n                  Automatické-Hraní", "\n                  Automatické Dlaždice"}},
-    {SystemLanguage::Vietnamese, {"\n                  Tự chơi", "\n                  Gạch tự chơi"}},
-    {SystemLanguage::Russian, {"\n                  Автоигра", "\n                  Авто тайл"}},
-    {SystemLanguage::Romanian, {"\n                  Redare automată", "\n                  Placă auto"}},
-    {SystemLanguage::Polish, {"\n                  Automatyczne odtwarzanie", "\n                  Automatyczne klocki"}},
-    {SystemLanguage::French, {"\n                  Jeu-automatique", "\n                  Tuile automatique"}},
-    {SystemLanguage::Portuguese, {"\n                  Automático", "\n                  Piso Automático"}},
-    {SystemLanguage::Spanish, {"\n                  Automático", "\n                  Piso Automático"}},
-    {SystemLanguage::English, {"\n                  Autoplay", "\n                  Auto tile"}},
-};
-
-// 优化点3: 使用 const 引用避免拷贝
-SystemLanguage StringToSystemLanguage(const std::string& languageStr) {
-    const auto it = languageMap.find(languageStr);
-    return it != languageMap.end() ? it->second : SystemLanguage::English;
-}
-
-String* (*old_Persistence_GetLanguage)();
-String* Persistence_GetLanguageMet() {
-    return old_Persistence_GetLanguage();
-}
-
-// 优化点4: 合并多次字符串操作
-SystemLanguage Persistence_GetLanguageMet_language() {
-    if (String* languageStr = Persistence_GetLanguageMet()) {
-        return StringToSystemLanguage(languageStr->str());
-    }
-    return SystemLanguage::English;
-}
-
-String* (*old_RDString_Get)(String*, Dictionary<String*, Il2CppObject*>*);
-String* RDString_Get(String* key, Dictionary<String*, Il2CppObject*>* parameters) {
-    // 优化点5: 缓存 key->str() 结果
-    const std::string keyStr = key->str();
-    
-    // 优化点6: 提前判断高频 key 提升分支预测
-    if (keyStr == "status.autoplay" || keyStr == "status.autoTile") {
-        const SystemLanguage language = Persistence_GetLanguageMet_language();
-        if (const auto it = translations.find(language); it != translations.end()) {
-            return CreateMonoString(
-                keyStr == "status.autoplay" ? 
-                it->second.autoplay : 
-                it->second.autoTile
-            );
-        }
-    }
-
-    // 优化点7: 使用短路表达式简化代码
-    return old_RDString_Get ? old_RDString_Get(key, parameters) : key;
-}
 
 DifficultyUIMode (*old_scrMisc_DetermineDifficultyUIMode)();
 DifficultyUIMode DetermineDifficultyUIModeMet() {
