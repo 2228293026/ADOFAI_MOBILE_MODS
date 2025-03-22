@@ -347,6 +347,7 @@ void PlayerUpdate(UnityEngine::Object *instance) {
     }*/
     //LoadLevelEditor();
     //__android_log_print(2,"TAG","curBPM:%f,realBPM:%f,Multiplier:%f,currentTile:%f,percentXAcc:%f,percentAcc:%f,progress:%f,ms:%f,clickPerSecond:%f",curBPM,realBPM,multiplier,currentTile,percentXAcc,percentAcc,progress,ms,clickPerSecond);
+    /*
     UnityEngine::Object* lm = getFieldValue<UnityEngine::Object *>("","scrLevelMaker","_instance");
     UnityEngine::Object* conductor = getFieldValue<UnityEngine::Object *>("","scrConductor","_instance");
     UnityEngine::Object* audioSource = getFieldValue<UnityEngine::Object *>("","scrConductor","song",conductor);
@@ -364,15 +365,12 @@ void PlayerUpdate(UnityEngine::Object *instance) {
     float songposition_minusiValue = songposition_minusiMet[conductor].Call();
 
     mapTime_f = musicTotalTimeValue + songposition_minusiValue;
-    /*
-    UnityEngine::Object* listFloorPtr = getFieldValue<UnityEngine::Object*>("","scrLevelMaker","listFloors",lm);
-    UnityEngine::Object lastFloor = Last(listFloorPtr);
-    */
     Class scrFloor = Class("","scrFloor");
     Field<double> entryTimeVar = scrFloor.GetField("entryTime");
     double entryTimeVarAll = entryTimeVar[floors].Get();
     double mapTimeTotalVal = entryTimeVarAll;
     mapTime = mapTimeTotalVal;
+    */
 }
 
 
@@ -411,6 +409,8 @@ void adofaiStart(UnityEngine::Object *instance) {
             hasTaroDLC.Set(true);
             ownsTaroDLC.Set(true);
         //}
+        
+        
 }
 
 void (*old_MoveToNextFloor)(UnityEngine::Object *,UnityEngine::Object *,UnityEngine::Object *,UnityEngine::Object *);
@@ -424,12 +424,6 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
     Field<double> marginScale = scrFloor.GetField("marginScale");
     Field<UnityEngine::Object *> prevFloorVar = scrFloor.GetField("prevFloor");
     UnityEngine::Object* prevFloor = prevFloorVar[arg1].Get();
-    //marginScale[arg0].Set(123456.25);
-    /*
-    double entryTime = entryTimeVar[arg1].Get();
-    double nextEntryTime = entryTimeVar[nextFloor].Get();
-    bool Twirl = isTwirl();
-     */
     UnityEngine::Object* conductor = getFieldValue<UnityEngine::Object *>("","scrConductor","_instance");
     UnityEngine::Object* lm = getFieldValue<UnityEngine::Object *>("","scrLevelMaker","_instance");
     UnityEngine::Object* customLevel = getFieldValue<UnityEngine::Object *>("","CustomLevel","instance");
@@ -456,6 +450,7 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
     }
     multiplier = speed[controller].Get();
     clickPerSecond = realBPM / 60;
+    /*
     UnityEngine::Object* currFloor = callMethod<UnityEngine::Object *>("","scrController","get_currFloor", controller);
     Field<double> MarginScale = Class("","scrFloor").GetField("marginScale");
     double MarginScaleValue = MarginScale[currFloor].Get();
@@ -468,11 +463,12 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
     int currentSeqIDValue = currentSeqID[scrController].Get();
     currentTile = currentSeqIDValue;
     */
+    /*
     Field<UnityEngine::Object*> mistakesManagerField = Class("","scrController").GetField("mistakesManager");
     UnityEngine::Object* mistakesManager = mistakesManagerField[controller].Get();
     Field<float> percentXAccField = Class("","scrMistakesManager").GetField("percentXAcc"); 
     float percentXAccValue = percentXAccField[mistakesManager].Get();
-        if (std::isnan(percentXAccValue)) {
+        if (isnan(percentXAccValue)) {
     percentXAccValue = 0;
     }
     percentXAcc = percentXAccValue;
@@ -483,7 +479,7 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
     Method<bool> get_isLevelSelect = Class("","ADOBase").GetMethod("get_isLevelSelect");
     
         //if (sceneName.Call()->str() == "scnEditor") {
-            if (get_isLevelSelect.Call() == false) {
+            if (!get_isLevelSelect.Call()) {
             Method<float> percentCompleteMethod = Class("","scrController").GetMethod("get_percentComplete"); 
     float percentCompleteValue = percentCompleteMethod[controller].Call();
     progress = percentCompleteValue;
@@ -526,28 +522,8 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
         }
     }
 */    
-    Method<int> getHitsMethod = Class("","scrMistakesManager").GetMethod("GetHits");
-    int tooEarlyNumValue = getHitsMethod[mistakesManager].Call(0);
-    tooEarlyNum = tooEarlyNumValue;
-    int veryEarlyNumValue = getHitsMethod[mistakesManager].Call(1);
-    veryEarlyNum = veryEarlyNumValue;
-    int earlyPerfectNumValue = getHitsMethod[mistakesManager].Call(2);
-    earlyPerfectNum = earlyPerfectNumValue;
-    int perfectNumValue = getHitsMethod[mistakesManager].Call(3);
-    perfectNum = perfectNumValue;
-    int latePerfectNumValue = getHitsMethod[mistakesManager].Call(4);
-    latePerfectNum = latePerfectNumValue;
-    int veryLateNumValue = getHitsMethod[mistakesManager].Call(5);
-    veryLateNum = veryLateNumValue;
-    int tooLateNumValue = getHitsMethod[mistakesManager].Call(6);
-    tooLateNum = tooLateNumValue;
-    int multipressNumValue = getHitsMethod[mistakesManager].Call(7);
-    multipressNum = multipressNumValue;
-    int failMissNumValue = getHitsMethod[mistakesManager].Call(8);
-    failMissNum = failMissNumValue;
-    int failOverloadNumValue = getHitsMethod[mistakesManager].Call(9);
-    failOverloadNum = failOverloadNumValue;
 }
+
 
 void startPlay(UnityEngine::Object *instance) {
     old_start(instance);
@@ -820,7 +796,7 @@ void syncFrameCount() {
 
 void ResetScene(UnityEngine::Object *instance) {
     old_ResetScene(instance);
-    //isStarted = false;
+    isStarted = false;
     //__android_log_print(ANDROID_LOG_WARN,"TAG","ResetScene()");
 }
 double getRealBPM(UnityEngine::Object *floor, UnityEngine::Object *nextFloor, float bpm) {
@@ -937,13 +913,92 @@ void OnGUI(UnityEngine::Object *instance) {
     Field<bool> isGameWorld = Class("","scrConductor").GetField("isGameWorld");
     
     isStarted = !_paused[Controller].Get() && isGameWorld[Conductor].Get()/* && Dev.Call()*/;
-    string NotPlaying("<b>Not Playing\nMod By HitMargin (Mod Version : 1.3)</b>");
+    string NotPlaying("Not Playing\nMod By HitMargin (Mod Version : 1.4)");
     string none(NotPlaying);
-    string NotPlayingWithDev("<b>Not Playing\nMod By HitMargin (Mod Version : 1.3,<color=Red>Developer!!</color>)</b>");
+    string NotPlayingWithDev("Not Playing\nMod By HitMargin (Mod Version : 1.4,<color=Red>Developer!!</color>)");
     string dev(NotPlayingWithDev);
 
  
     if (isStarted) {
+        
+    
+    UnityEngine::Object* currFloor = callMethod<UnityEngine::Object *>("","scrController","get_currFloor", Controller);
+    Field<double> MarginScale = Class("","scrFloor").GetField("marginScale");
+    double MarginScaleValue = MarginScale[currFloor].Get();
+    margin = MarginScaleValue *100;
+    /*
+        Field<float> currentSpeedTrial = Class("","GCS").GetField("currentSpeedTrial");
+    float speedTrial = currentSpeedTrial.Get();
+    /*
+    Field<int> currentSeqID = Class("","scrController").GetField("currentSeqID"); 
+    int currentSeqIDValue = currentSeqID[scrController].Get();
+    currentTile = currentSeqIDValue;
+    */
+    Field<UnityEngine::Object*> mistakesManagerField = Class("","scrController").GetField("mistakesManager");
+    UnityEngine::Object* mistakesManager = mistakesManagerField[Controller].Get();
+    Field<float> percentXAccField = Class("","scrMistakesManager").GetField("percentXAcc"); 
+    float percentXAccValue = percentXAccField[mistakesManager].Get();
+        if (isnan(percentXAccValue)) {
+    percentXAccValue = 0;
+    }
+    percentXAcc = percentXAccValue;
+    Field<float> percentAccField = Class("","scrMistakesManager").GetField("percentAcc"); 
+    float percentAccValue = percentAccField[mistakesManager].Get();
+    percentAcc = percentAccValue;
+    Method<String*> sceneName = Class("","ADOBase").GetMethod("get_sceneName");
+    Method<bool> get_isLevelSelect = Class("","ADOBase").GetMethod("get_isLevelSelect");
+    
+        //if (sceneName.Call()->str() == "scnEditor") {
+            if (!get_isLevelSelect.Call()) {
+            Method<float> percentCompleteMethod = Class("","scrController").GetMethod("get_percentComplete"); 
+    float percentCompleteValue = percentCompleteMethod[Controller].Call();
+    progress = percentCompleteValue;
+    }
+        
+    Method<int> getHitsMethod = Class("", "scrMistakesManager").GetMethod("GetHits");
+
+    int hitDataVars[10];
+
+    for (int i = 0; i < 10; i++) {
+        hitDataVars[i] = getHitsMethod[mistakesManager].Call(i);
+    }
+
+    // 将数组中的数据赋值给对应的变量
+    tooEarlyNum = hitDataVars[0];
+    veryEarlyNum = hitDataVars[1];
+    earlyPerfectNum = hitDataVars[2];
+    perfectNum = hitDataVars[3];
+    latePerfectNum = hitDataVars[4];
+    veryLateNum = hitDataVars[5];
+    tooLateNum = hitDataVars[6];
+    multipressNum = hitDataVars[7];
+    failMissNum = hitDataVars[8];
+    failOverloadNum = hitDataVars[9];
+    
+    UnityEngine::Object* audioSource = getFieldValue<UnityEngine::Object *>("","scrConductor","song",Conductor);
+    Method<float> musicTimeMet = Class("UnityEngine","AudioSource").GetMethod("get_time");
+    float musicTimeValue = musicTimeMet[audioSource].Call();
+    musicTime = musicTimeValue;
+    UnityEngine::Object* audioClip = callMethod<UnityEngine::Object *>("UnityEngine","AudioSource","get_clip",audioSource);
+    Method<float> musicTotalTimeMet = Class("UnityEngine","AudioClip").GetMethod("get_length");
+    float musicTotalTimeValue = musicTotalTimeMet[audioClip].Call();
+    totalTime = musicTotalTimeValue;
+
+    Field<float> addoffsetFie = Class("","scrConductor").GetField("addoffset");
+    float addoffsetValue = addoffsetFie[Conductor].Get();
+    Method<double> songposition_minusiMet = Class("","scrConductor").GetMethod("get_songposition_minusi");
+    float songposition_minusiValue = songposition_minusiMet[Conductor].Call();
+
+    mapTime_f = musicTotalTimeValue + songposition_minusiValue;
+    /*
+    UnityEngine::Object* listFloorPtr = getFieldValue<UnityEngine::Object*>("","scrLevelMaker","listFloors",lm);
+    UnityEngine::Object lastFloor = Last(listFloorPtr);
+    */
+    Class scrFloor = Class("","scrFloor");
+    Field<double> entryTimeVar = scrFloor.GetField("entryTime");
+    double entryTimeVarAll = entryTimeVar[currFloor].Get();
+    double mapTimeTotalVal = entryTimeVarAll;
+    mapTime = mapTimeTotalVal;
         
         float totalLength = totalTime;
         std::string totalLengthFormatted = secondsToMMSS(totalLength);
@@ -1145,7 +1200,7 @@ void OnGUI(UnityEngine::Object *instance) {
         AddText(text,250,30,40,Color(1.0f,1.0f,1.0f),Color(0.f,0.f,0.f,0.5f),Vector2(2,2),UpperCenter);
         old_OnGUI(instance);
     } else  {
-        if (devValue == true) {
+        if (devValue) {
             AddText(dev,70,0,30,Color(1.0f,1.0f,1.0f),Color(0,0,0),Vector2(1.5,-1.5));
         old_OnGUI(instance);
         } else {
@@ -1184,7 +1239,7 @@ void AddText(string text, float x, float y, int textSize, Color color,
         Field<UnityEngine::Object*> koreanFont = Class("","RDConstants").GetField("koreanFont");
         Method<void> setFont = GUIStyleClass.GetMethod("set_font");
         String* currentLanguage = Persistence_GetLanguageMet();
-        std::string currentLang = currentLanguage ? currentLanguage->str() : "";
+        string currentLang = currentLanguage ? currentLanguage->str() : "";
 
         // 根据实际内容判断语言
         if (currentLang != "ChineseSimplified") {
@@ -1274,22 +1329,6 @@ void AddText(string text, float x, float y, int textSize, Color color,
     guiLabel.Call(mainRect, CreateMonoString(text), mainStyle);     // 再绘制主文本
 }
 
-    Il2CppObject* LoadSystemFont(const std::string& fontName, int fontSize) {
-    // 获取Font类引用
-    static Class FontClass = Class("UnityEngine", "Font");
-    
-    // 调用CreateDynamicFontFromOSFont方法
-    static Method<Il2CppObject*> createMethod = FontClass.GetMethod(
-        "CreateDynamicFontFromOSFont", 
-        {"System.String", "System.Int32"}
-    );
-    
-    
-    // 创建字体对象
-    //Il2CppString* il2cppFontName = CreateMonoString(fontName);
-    return createMethod.Call(nullptr, CreateMonoString(fontName), fontSize);
-}
-
 Il2CppObject* LoadResourceFont(const std::string& resourcePath) {
     // 获取Resources类
     static Class ResourcesClass = Class("UnityEngine", "Resources");
@@ -1297,7 +1336,7 @@ Il2CppObject* LoadResourceFont(const std::string& resourcePath) {
     // 调用Resources.Load方法
     static Method<Il2CppObject*> loadMethod = ResourcesClass.GetMethod(
         "Load", 
-        {"System.String", "System.Type"}
+        {"path", "systemTypeInstance"}
     );
     
     // 获取Font类
@@ -1369,6 +1408,7 @@ void fuck() {
 void (*old_scrMistakesManager_AddHit)(UnityEngine::Object *);
 void AddHitMet(UnityEngine::Object *instance, HitMargin hit) {
     old_scrMistakesManager_AddHit(instance);
+    /*
     switch (hit) {
         case TooEarly:
             score += 30;
@@ -1407,13 +1447,14 @@ void AddHitMet(UnityEngine::Object *instance, HitMargin hit) {
     if (hit == FailOverload) {
         score -= 200;
     }
-    
+    */
         if (hit == Perfect) {
             PerfectCombo++;
             } else {
                 PerfectCombo = 0;
             }
 }
+
 
 bool (*old_Bool_isMobile)(UnityEngine::Object *);
 bool Bool_IsMobile(bool value) {
@@ -1451,7 +1492,15 @@ bool (*old_scrPlanet_GetMultipressPenalty)();
 bool GetMultipressPenaltyMet() {
     return false;
 }
+int (*old_IntValidate)(UnityEngine::Object *);
+int IntValidate(UnityEngine::Object *instance, int value) {
+    return value;
+}
 
+float (*old_FloatValidate)(UnityEngine::Object *);
+float FloatValidate(UnityEngine::Object *instance, float value) {
+    return value;
+}
 /*
 没用的
 void (*old_scrController_Awake)(UnityEngine::Object *);
@@ -1509,6 +1558,7 @@ template <typename T>
 T Last(T& ref) {
     return ref;
 }
+
 
 std::string FormatFloatToString(float value, std::ostringstream& ss) {
     ss.str("");
@@ -1569,7 +1619,7 @@ void start() {
                 auto loadLevel = Class("","scrController").GetMethod("Restart");
                 HOOK(loadLevel, newRestart,old_scrController_Restart);
                 auto quittomenu = Class("","scrController").GetMethod("QuitToMainMenu");
-                HOOK(quittomenu, load,old_scrController_QuitToMainMenu);
+                //HOOK(quittomenu, load,old_scrController_QuitToMainMenu);
                 auto AddHitClass = Class("","scrMistakesManager").GetMethod("AddHit");
                 HOOK(AddHitClass, AddHitMet,old_scrMistakesManager_AddHit);
                 auto scrControllerClass_GetShowHitTextMethod = Class("","scrController").GetMethod("ShowHitText");
@@ -1616,9 +1666,22 @@ void start() {
                 HOOK(isMobile, IsMobile,old_isMobile);
                 HOOK(isMobile, Bool_IsMobile,old_Bool_isMobile);
                 auto GetRecoverSaveDataFromSteamAchievements = Class("","Persistence").GetMethod("RecoverSaveDataFromSteamAchievements");
-                HOOK(GetRecoverSaveDataFromSteamAchievements, fuck,old_RecoverSaveDataFromSteamAchievements);
+                //HOOK(GetRecoverSaveDataFromSteamAchievements, fuck,old_RecoverSaveDataFromSteamAchievements);
                 //auto GetDebug = Class("","RDC").GetMethod("get_debug");
                 // HOOK(GetDebug, debug,old_debug);
+                
+                Class PropertyInfoClass = Class("ADOFAI", "PropertyInfo");
+
+    auto ValidateFloat = PropertyInfoClass.GetMethod(
+        "Validate", 
+        {"System.Single"}
+    );
+    HOOK(ValidateFloat, FloatValidate,old_FloatValidate);
+    auto ValidateInt = PropertyInfoClass.GetMethod(
+        "Validate", 
+        {"System.Int32"}
+    );
+    HOOK(ValidateInt, IntValidate,old_IntValidate);
                         BNM_catch(exception)
                         auto name = exception.ClassName();
                             __android_log_print(3,"114514","%s", name.c_str());
