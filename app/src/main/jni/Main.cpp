@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cctype>
+#include <fstream>
 
 using namespace std;
 using namespace BNM;
@@ -36,9 +37,7 @@ void (*old_SFB_StandaloneFileBrowser_OpenFilePanel)(UnityEngine::Object *);
 void (*old_SFB_StandaloneFileBrowser_SaveFilePanelAsync)(UnityEngine::Object *);
 void (*old_ResetScene)(UnityEngine::Object *);
 
-UnityEngine::Object *floors;
 bool isStarted = false;
-UnityEngine::Object *scrController;
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, [[maybe_unused]] void *reserved) {
     JNIEnv *env;
     vm->GetEnv((void **) &env, JNI_VERSION_1_6);
@@ -380,7 +379,7 @@ void adofaiStart(UnityEngine::Object *instance) {
     UnityEngine::Object* controller = getFieldValue<UnityEngine::Object *>("","scrController","_instance",
                                                                          nullptr);
                                       
-    //正常冰与火之舞需要删除以下修改
+    // 正常冰与火之舞需要删除以下修改
     /*Field<String*> sceneToLoadField = Class("", "GCS").GetField("sceneToLoad");
     sceneToLoadField.Set(CreateMonoString("scnEditor"));
     Class GCNS = Class("","GCNS");
@@ -416,7 +415,6 @@ void adofaiStart(UnityEngine::Object *instance) {
 void (*old_MoveToNextFloor)(UnityEngine::Object *,UnityEngine::Object *,UnityEngine::Object *,UnityEngine::Object *);
 void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityEngine::Object *arg2,UnityEngine::Object *arg3) {
     old_MoveToNextFloor(arg0,arg1,arg2,arg3);
-    floors = arg1;
     Class scrFloor = Class("","scrFloor");
     Field<double> entryTimeVar = scrFloor.GetField("entryTime");
     Field<UnityEngine::Object *> nextFloorVar = scrFloor.GetField("nextfloor");
@@ -435,11 +433,8 @@ void MoveToNextFloor(UnityEngine::Object *arg0, UnityEngine::Object *arg1,UnityE
     Method<float> songPitch = Class("UnityEngine","AudioSource").GetMethod("get_pitch");
     UnityEngine::Object* audioSource = getFieldValue<UnityEngine::Object *>("","scrConductor","song",conductor);
     float PitchAll = songPitch[audioSource].Call();
-    //curBPM = levelBPM[conductor].Get() * speed[scrController].Get() * speedOfPitch * speedTrial;
     curBPM = levelBPM[conductor].Get() * PitchAll * speed[controller].Get();
-    //lastBPM = realBPM / speedOfPitch * speedTrial;
     lastBPM = realBPM / PitchAll;
-    //realBPM = getRealBPM(arg1,nextFloor,bpm) * speedOfPitch * speedTrial;
     realBPM = getRealBPM(arg1,nextFloor,bpm) * PitchAll;
     static double prevAvgBPM = 0.0;
     avgBPM = fabs(getRealBPM(arg1, prevFloor, bpm) * PitchAll);
@@ -588,7 +583,7 @@ void startPlay(UnityEngine::Object *instance) {
     UnityEngine::Object* mistakesManager = mistakesManagerField[controller].Get();
     Field<float> percentXAccField = Class("","scrMistakesManager").GetField("percentXAcc"); 
     float percentXAccValue = percentXAccField[mistakesManager].Get();
-        if (std::isnan(percentXAccValue)) {
+        if (isnan(percentXAccValue)) {
     percentXAccValue = 0;
     }
     percentXAcc = percentXAccValue;
@@ -710,7 +705,7 @@ void load(UnityEngine::Object *instance) {
     sceneToLoadField.Set(CreateMonoString("scnEditor"));
     */
     //GoToNeoCosmos();
-    //正常冰与火需要删除以下修改
+    // Normal ice and fire require deletion of the following modifications
    /* Field<String*> sceneToLoadField = Class("", "GCS").GetField("sceneToLoad");
     sceneToLoadField.Set(CreateMonoString("scnEditor"));
     
@@ -723,7 +718,7 @@ string levelPath() {
     return Path;
 }
 */
-// 忽略大小写的字符串比较函数
+// Ignore uppercase and lowercase string comparison function
 bool acasecmp(const std::string& a, const std::string& b) {
     auto strCmp = [](char a, char b) {
         return std::tolower(a) == std::tolower(b);
@@ -734,7 +729,7 @@ bool acasecmp(const std::string& a, const std::string& b) {
 String* OpenedLevelMet() {
     std::vector<std::string> files;
     try {
-        // 获取目录中的所有.adofai文件
+        // Retrieve all. adofai files from the directory
         for (const auto& entry : fs::directory_iterator("/sdcard/levels/level/")) {
             if (entry.is_regular_file() && entry.path().extension() == ".adofai") {
                 files.push_back(entry.path().string());
@@ -749,7 +744,7 @@ std::sort(files.begin(), files.end(), [](const std::string& a, const std::string
         return acasecmp(a, b);
     });
 
-    // 查找第一个不是"backup.adofai"的文件
+    // Find the first file that is not 'backup.adofai'
     for (const auto& file : files) {
         if (fs::path(file).filename().string() != "backup.adofai") {
             return CreateMonoString(std::string(file));
@@ -779,7 +774,7 @@ Array<String *> *openFilePanel(String title, String directory, String extensions
 void saveFilePanelAsync(String title, String directory, String defaultName, String extension, Action<String *> cb) {
     Method<String*> levelPathMethod = Class("", "Persistence").GetMethod("GetLastOpenedLevel");
     auto Path = levelPathMethod.Call()->str();
-    //if (Path.empty()) {
+    // if (Path.empty()) {
     cb.Invoke(CreateMonoString("/sdcard/levels/level/main.adofai"));
     /*
     } else {
@@ -818,13 +813,13 @@ bool isTwirl() {
     Field<bool> isCW = scrController.GetField("isCW");
     return isCW[instance.Get()].Get();
 }
-// 使用 const 修饰符防止意外修改
+// Using const modifier to prevent accidental modifications
 struct Translation {
     const char* autoplay;
     const char* autoTile;
 };
 
-// 优化点1: 使用 unordered_map 并声明为 const 提升查找性能
+// Optimization point 1: Use unordered_map and declare it as const to improve search performance
 const std::unordered_map<std::string, SystemLanguage> languageMap = {
     {"ChineseSimplified", SystemLanguage::ChineseSimplified},
     {"German", SystemLanguage::German},
@@ -842,8 +837,8 @@ const std::unordered_map<std::string, SystemLanguage> languageMap = {
     {"English", SystemLanguage::English},
 };
 
-// 优化点2: 改用 unordered_map 提升查找效率
-// 注意：需确保 SystemLanguage 已实现哈希函数
+// Optimization point 2: Using unordered_map to improve search efficiency
+// Note: Ensure that SystemLanguage has implemented hash functions
 std::unordered_map<SystemLanguage, Translation> translations = {
     {SystemLanguage::ChineseSimplified, {"\n                  自动播放", "\n                  自动方块"}},
     {SystemLanguage::German, {"\n                  Automatische Wiedergabe", "\n                  Automatischer Block"}},
@@ -861,7 +856,7 @@ std::unordered_map<SystemLanguage, Translation> translations = {
     {SystemLanguage::English, {"\n                  Autoplay", "\n                  Auto tile"}},
 };
 
-// 优化点3: 使用 const 引用避免拷贝
+// Optimization point 3: Use const references to avoid copying
 SystemLanguage StringToSystemLanguage(const std::string& languageStr) {
     const auto it = languageMap.find(languageStr);
     return it != languageMap.end() ? it->second : SystemLanguage::English;
@@ -872,7 +867,7 @@ String* Persistence_GetLanguageMet() {
     return old_Persistence_GetLanguage();
 }
 
-// 优化点4: 合并多次字符串操作
+// Optimization point 4: Merge multiple string operations
 SystemLanguage Persistence_GetLanguageMet_language() {
     if (String* languageStr = Persistence_GetLanguageMet()) {
         return StringToSystemLanguage(languageStr->str());
@@ -882,10 +877,10 @@ SystemLanguage Persistence_GetLanguageMet_language() {
 
 String* (*old_RDString_Get)(String*, Dictionary<String*, Il2CppObject*>*);
 String* RDString_Get(String* key, Dictionary<String*, Il2CppObject*>* parameters) {
-    // 优化点5: 缓存 key->str() 结果
+    // Optimization point 5: Cache key ->str() results
     const std::string keyStr = key->str();
     
-    // 优化点6: 提前判断高频 key 提升分支预测
+    // Optimization point 6: Advance judgment of high-frequency keys to improve branch prediction
     if (keyStr == "status.autoplay" || keyStr == "status.autoTile") {
         const SystemLanguage language = Persistence_GetLanguageMet_language();
         if (const auto it = translations.find(language); it != translations.end()) {
@@ -897,7 +892,7 @@ String* RDString_Get(String* key, Dictionary<String*, Il2CppObject*>* parameters
         }
     }
 
-    // 优化点7: 使用短路表达式简化代码
+    // Optimization point 7: Simplify code using short-circuit expressions
     return old_RDString_Get ? old_RDString_Get(key, parameters) : key;
 }
 
@@ -948,7 +943,6 @@ void OnGUI(UnityEngine::Object *instance) {
     Method<String*> sceneName = Class("","ADOBase").GetMethod("get_sceneName");
     Method<bool> get_isLevelSelect = Class("","ADOBase").GetMethod("get_isLevelSelect");
     
-        //if (sceneName.Call()->str() == "scnEditor") {
             if (!get_isLevelSelect.Call()) {
             Method<float> percentCompleteMethod = Class("","scrController").GetMethod("get_percentComplete"); 
     float percentCompleteValue = percentCompleteMethod[Controller].Call();
@@ -963,7 +957,7 @@ void OnGUI(UnityEngine::Object *instance) {
         hitDataVars[i] = getHitsMethod[mistakesManager].Call(i);
     }
 
-    // 将数组中的数据赋值给对应的变量
+    // Assign the data in the array to the corresponding variables
     tooEarlyNum = hitDataVars[0];
     veryEarlyNum = hitDataVars[1];
     earlyPerfectNum = hitDataVars[2];
@@ -1006,7 +1000,7 @@ void OnGUI(UnityEngine::Object *instance) {
         float currentTime = musicTime;
         std::string currentTimeFormatted = secondsToMMSS(currentTime);
         std::string mapTimeFormatted = secondsToMMSS(mapTime);
-        //Il2CppObject* customFont = LoadResourceFont("/sdcard/Font/Maplestory OTF Bold");
+        // Il2CppObject* customFont = LoadResourceFont("/sdcard/Font/Maplestory OTF Bold");
         char text[256 * 16];
     sprintf(text,//"<b>"
                  "Tile BPM | %.2f\n"
@@ -1211,7 +1205,7 @@ void OnGUI(UnityEngine::Object *instance) {
 }
 
 
-//显示
+// display. Important
 void AddText(string text, float x, float y, int textSize, Color color, 
             Color shadowColor, Vector2 shadowOffset, TextAnchor alignment) 
 {
@@ -1221,19 +1215,19 @@ void AddText(string text, float x, float y, int textSize, Color color,
     Il2CppObject* mainStyle = GUIStyleClass.CreateNewObjectParameters();
     
     auto SetStyleProperties = [&](Il2CppObject* style) {
-        // 字体样式
+        // Font Style
         Method<void> setFontStyle = GUIStyleClass.GetMethod("set_fontStyle");
         setFontStyle[style].Call(0); // FontStyle.Normal
         
-        // 字体大小
+        // font size
         Method<void> setFontSize = GUIStyleClass.GetMethod("set_fontSize");
         setFontSize[style].Call(textSize);
         
-        // 对齐方式
+        // justification
         Method<void> setAlignment = GUIStyleClass.GetMethod("set_alignment");
         setAlignment[style].Call(alignment);
         
-        // 设置字体
+        // set font
         UnityEngine::Object* Onstants = getFieldValue<UnityEngine::Object *>("","RDConstants","internalData");
         Field<UnityEngine::Object*> chineseFont = Class("","RDConstants").GetField("chineseFont");
         Field<UnityEngine::Object*> koreanFont = Class("","RDConstants").GetField("koreanFont");
@@ -1241,7 +1235,7 @@ void AddText(string text, float x, float y, int textSize, Color color,
         String* currentLanguage = Persistence_GetLanguageMet();
         string currentLang = currentLanguage ? currentLanguage->str() : "";
 
-        // 根据实际内容判断语言
+        // Judging language based on actual content
         if (currentLang != "ChineseSimplified") {
             setFont[style].Call(koreanFont[Onstants].Get());
         } else {
@@ -1249,10 +1243,10 @@ void AddText(string text, float x, float y, int textSize, Color color,
         }
     };
 
-    // 初始化主样式
+    // Initialize the main style
     SetStyleProperties(mainStyle);
 
-    // 颜色设置函数
+    // Color setting function
     auto SetStyleColor = [&](Il2CppObject* style, Color color) {
         Method<Il2CppObject*> getNormal = GUIStyleClass.GetMethod("get_normal");
         Il2CppObject* normalState = getNormal[style].Call();
@@ -1260,34 +1254,34 @@ void AddText(string text, float x, float y, int textSize, Color color,
         setTextColor[normalState].Call(color);
     };
     
-    // 强制覆盖阴影颜色为纯黑（带透明度控制）
+    // Force the shadow color to be pure black (with transparency control)
     shadowColor = Color{0.0f, 0.0f, 0.0f, shadowColor.a}; // 固定RGB为黑色，保留原有透明度
 
-    // 设置阴影颜色（增强型方法）
+    // Set Shadow Color (Enhanced Method)
     auto ForceSetShadowColor = [&](Il2CppObject* style) {
-        // 获取GUIStyleState
+        // Get GUIStyleState
         Method<Il2CppObject*> getNormal = GUIStyleClass.GetMethod("get_normal");
         Il2CppObject* normalState = getNormal[style].Call();
         
-        // 强制设置所有颜色通道
+        // Force all color channels to be set
         Method<void> setTextColor = Class("UnityEngine", "GUIStyleState").GetMethod("set_textColor");
         setTextColor[normalState].Call(shadowColor);
         
-        // 清除可能覆盖颜色的其他状态
+        // Clear other states that may overwrite the color
         Method<void> setBackground = Class("UnityEngine", "GUIStyleState").GetMethod("set_background");
-        setBackground[normalState].Call(nullptr); // 移除背景纹理
+        setBackground[normalState].Call(nullptr); // Remove background texture
     };
 
 
-    // 设置主文本颜色
+    // Set the main text color
     SetStyleColor(mainStyle, color);
 
-    // 计算文本实际尺寸
+    // Calculate the actual size of the text
     Method<Vector2> calcSize = GUIStyleClass.GetMethod("CalcSize");
     Il2CppObject* content = GUIContentClass.CreateNewObjectParameters(CreateMonoString(text));
     Vector2 textSizeVec = calcSize[mainStyle].Call(content);
 
-    // 根据对齐方式调整原点坐标
+    // Adjust the origin coordinates according to the alignment method
     float originX = x;
     float originY = y;
     switch (alignment) {
@@ -1306,43 +1300,42 @@ void AddText(string text, float x, float y, int textSize, Color color,
                originY -= textSizeVec.y; break;
     }
 
-    // 创建阴影样式（完全独立的属性设置）
+    // Create shadow style (completely independent attribute settings)
     Il2CppObject* shadowStyle = GUIStyleClass.CreateNewObjectParameters();
-    SetStyleProperties(shadowStyle); // 重用属性设置函数
+    SetStyleProperties(shadowStyle); // Reuse attribute setting function
     SetStyleColor(shadowStyle, shadowColor);
-    ForceSetShadowColor(shadowStyle); // 使用强化版颜色设置
+    ForceSetShadowColor(shadowStyle); // Use enhanced color settings
 
-    // 创建绘制区域
-    Structures::Unity::Rect mainRect(originX, originY, textSizeVec.x, textSizeVec.y);
-    Structures::Unity::Rect shadowRect(
+    // Create drawing area
+    Rect mainRect(originX, originY, textSizeVec.x, textSizeVec.y);
+    Rect shadowRect(
         originX + shadowOffset.x,
         originY + shadowOffset.y,
         textSizeVec.x,
         textSizeVec.y
     );
 
-    // 执行绘制
+    // Execute drawing
     Method<void> guiLabel = Class("UnityEngine", "GUI").GetMethod("Label", {"position", "text", "style"});
-    //CppString* monoText = CreateMonoString(text);
     
-    guiLabel.Call(shadowRect, CreateMonoString(text), shadowStyle); // 先绘制阴影
-    guiLabel.Call(mainRect, CreateMonoString(text), mainStyle);     // 再绘制主文本
+    guiLabel.Call(shadowRect, CreateMonoString(text), shadowStyle); // Draw shadows first
+    guiLabel.Call(mainRect, CreateMonoString(text), mainStyle);     // Draw the main text again
 }
 
 Il2CppObject* LoadResourceFont(const std::string& resourcePath) {
-    // 获取Resources类
+    // Get Resources class
     static Class ResourcesClass = Class("UnityEngine", "Resources");
     
-    // 调用Resources.Load方法
+    // Call Resources Load method
     static Method<Il2CppObject*> loadMethod = ResourcesClass.GetMethod(
         "Load", 
         {"path", "systemTypeInstance"}
     );
     
-    // 获取Font类
+    // Get Font class
     static Class FontClass = Class("UnityEngine", "Font");
     
-    // 获取Font类型
+    // Get Font type
     static Il2CppType* fontType = &FontClass.GetClass()->byval_arg;
     
     return loadMethod.Call(nullptr, CreateMonoString(resourcePath), fontType);
@@ -1350,7 +1343,7 @@ Il2CppObject* LoadResourceFont(const std::string& resourcePath) {
 
 
 Il2CppObject* GetDefaultFont() {
-    // 获取内置默认字体（如Arial）
+    // Get built-in default font（for example: Arial）
     static Class FontClass = Class("UnityEngine", "Font");
     static Field<Il2CppObject*> defaultFontField = FontClass.GetField("defaultFont");
     return defaultFontField.Get();
@@ -1361,16 +1354,17 @@ std::string secondsToMMSS(float seconds) {
     int minutes = static_cast<int>(seconds) / 60;
     int secs = static_cast<int>(seconds) % 60;
 
-    // 使用 std::ostringstream 格式化字符串
-    std::ostringstream oss;
-    oss << std::setw(2) << std::setfill('0') << minutes << ":"
-        << std::setw(2) << std::setfill('0') << secs;
+    // use std::ostringstream format string
+    ostringstream oss;
+    oss << setw(2) << setfill('0') << minutes << ":"
+        << setw(2) << setfill('0') << secs;
 
     return oss.str();
 }
 
+// Gradient Color
 Color lerpColor(const Color& a, const Color& b, float t) {
-    t = std::max(0.0f, std::min(1.0f, t));
+    t = max(0.0f, min(1.0f, t));
     return Color(
         a.r + (b.r - a.r) * t,
         a.g + (b.g - a.g) * t,
@@ -1378,17 +1372,81 @@ Color lerpColor(const Color& a, const Color& b, float t) {
     );
 }
 
-//自定义dlc扩展包路径
+// old custom dlc path
+/*
 String (*old_dlcPath)(UnityEngine::Object *);
 String* dlc(UnityEngine::Object *instance) {
     return CreateMonoString("/sdcard/DLC/2.4.5/NeoCosmos");
-    
 }
-//开启debug
+*/
+// custom dlc path. (/≧▽≦/)
+    static constexpr const char* Root = "/sdcard/DLC";
+    static constexpr const char* Version = "2.4.5";
+    static constexpr const char* Module = "NeoCosmos";
+    static constexpr const char* LogFile = "path_log.txt";
+    constexpr size_t MAX_LOG_SIZE = 1024 * 1024;  // 1MB
+    static std::string FullPath() {
+        return std::string(Root) + "/" + Version + "/" + Module;
+    }
+    
+    static std::string LogPath() {
+        return std::string(Root) + "/" + LogFile;
+    }
+
+
+String (*old_dlcPath)(UnityEngine::Object*);
+String* dlc(UnityEngine::Object* instance) {
+    // create directory
+    try {
+        fs::create_directories(FullPath());
+    } catch (...) {
+        // Failed to process directory creation
+    }
+
+    // Write Log
+    if (auto logSuccess = WritePathToFile(FullPath()); !logSuccess) {
+        // Failed to process log writing
+    }
+
+    // Call the original function
+    if (old_dlcPath) {
+        old_dlcPath(instance);
+    }
+
+    return CreateMonoString(FullPath().c_str());
+}
+
+bool WritePathToFile(const std::string& path) {
+    try {
+        // Check log size
+        if (fs::exists(LogPath()) && 
+            fs::file_size(LogPath()) > MAX_LOG_SIZE) 
+        {
+            fs::remove(LogPath());
+        }
+
+        // Write Log
+        std::ofstream file(LogPath(), ios::app);
+        if (!file) return false;
+
+        auto now = chrono::system_clock::now();
+        auto time = chrono::system_clock::to_time_t(now);
+        
+        file << "[ " << put_time(localtime(&time), "%Y-%m-%d %H:%M:%S") << " ] "
+             << "DLC Path: " << path << "\n";
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+// use debug. I don't need
 bool (*old_debug)(UnityEngine::Object *);
 bool debug(UnityEngine::Object *instance) {
     return true;
 }
+
+// desktop dlc ggggooo-ooodddd
 bool (*old_isMobile)(UnityEngine::Object *);
 bool IsMobile(UnityEngine::Object *instance) {
         Method<String*> sceneName = Class("","ADOBase").GetMethod("get_sceneName");
@@ -1399,12 +1457,14 @@ bool IsMobile(UnityEngine::Object *instance) {
         }
 }
 
+// shit. I don't know what use it is
 void (*old_RecoverSaveDataFromSteamAchievements)(UnityEngine::Object *);
 void fuck() {
     Field<String*> sceneToLoadField = Class("", "GCS").GetField("sceneToLoad");
     sceneToLoadField.Set(CreateMonoString("scnEditor"));
 }
 
+// add perfect combo.en… (´๑•_•๑)
 void (*old_scrMistakesManager_AddHit)(UnityEngine::Object *);
 void AddHitMet(UnityEngine::Object *instance, HitMargin hit) {
     old_scrMistakesManager_AddHit(instance);
@@ -1455,54 +1515,60 @@ void AddHitMet(UnityEngine::Object *instance, HitMargin hit) {
             }
 }
 
-
-bool (*old_Bool_isMobile)(UnityEngine::Object *);
+// check isMobile. I needn't it. (´×ω×`)
+bool (*old_Bool_isMobile)();
 bool Bool_IsMobile(bool value) {
         return value;
 }
 
-bool (*old_RDColorPickerPopup_get_UsesAlpha)(UnityEngine::Object *);
-bool UsesAlphaMet(UnityEngine::Object *instance) {
+// force use alpha
+bool (*old_RDColorPickerPopup_get_UsesAlpha)();
+bool UsesAlphaMet() {
     return true;
 }
 
-//屏蔽判定文本
+// "Hide" Perfect
 void (*old_scrController_ShowHitText)(UnityEngine::Object *,HitMargin,Vector3,float);
 void ShowHitTextMet(UnityEngine::Object *instance,HitMargin hitMargin,Vector3 position,float angle) {
-    if (hitMargin != Perfect) {
+    if (hitMargin != Perfect)
     old_scrController_ShowHitText(instance, hitMargin, position, angle);
-    }
 }
 
 
-
+// Show All Judgment selection
 DifficultyUIMode (*old_scrMisc_DetermineDifficultyUIMode)();
 DifficultyUIMode DetermineDifficultyUIModeMet() {
     return ShowAll;
 }
 
-void (*old_scrMisc_GetHitMargin)();
-void GetHitMarginMet(float hitangle, float refangle, bool isCW, float bpmTimesSpeed, float conductorPitch) {
-    old_scrMisc_GetHitMargin();
-    float angle = (hitangle - refangle) * (isCW ? 1 : -1) * 57.29578f;
-    ms = angle / 180 / bpmTimesSpeed / conductorPitch * 60000;
+// Timing ψ(｀∇´)ψ
+void (*old_scrMisc_GetHitMargin)(float, float, bool, float, float);
+void GetHitMarginMet(float hitangle, float refangle, bool isCW, 
+            float bpmTimesSpeed, float conductorPitch) {
+    old_scrMisc_GetHitMargin(hitangle, refangle, isCW, bpmTimesSpeed, conductorPitch);
+    float angle = (hitangle - refangle) * (isCW ? 1 : -1) * (180.0f / M_PI);
+    ms = angle / 180.0f / bpmTimesSpeed / conductorPitch * 60000.0f;
 }
 
+// Closed Annoying settings. (๑>؂<๑)
 bool (*old_scrPlanet_GetMultipressPenalty)();
 bool GetMultipressPenaltyMet() {
     return false;
 }
-int (*old_IntValidate)(UnityEngine::Object *);
-int IntValidate(UnityEngine::Object *instance, int value) {
+
+// NOOOOO(…&…)
+int (*old_IntValidate)(int);
+int IntValidate(int value) {
     return value;
 }
 
-float (*old_FloatValidate)(UnityEngine::Object *);
-float FloatValidate(UnityEngine::Object *instance, float value) {
+// NOOOOO*2 OHOHOH
+float (*old_FloatValidate)(float);
+float FloatValidate(float value) {
     return value;
 }
 /*
-没用的
+useless
 void (*old_scrController_Awake)(UnityEngine::Object *);
 void AwakeMet(UnityEngine::Object *instance) {
     auto  ADOBaseClass = Class("","ADOBase");
@@ -1511,23 +1577,24 @@ void AwakeMet(UnityEngine::Object *instance) {
     old_scrController_Awake(instance);
     Bool_IsMobile(true);
 }
-
+useless*2
 void (*old_scrRing_Update)(UnityEngine::Object *);
 void UpdateMet(UnityEngine::Object *instance) {
     return;
 }
-
+useless*3
 void (*old_scrPlanet_SetRingColor)(UnityEngine::Object *);
 void SetRingColorMet(UnityEngine::Object *instance, Color color) {
     Color(0.0f,0.0f,0.0f,0.0f);
     return;
 }
+useless*4
 int (*old_PropertyInfo_Validate)(UnityEngine::Object *);
 int IntValidateMet(UnityEngine::Object *instance, int value) {
     return value;
 }
 */
-
+// useful, very useful, best useful
 template <typename T>
 T getFieldValue(std::string NS,std::string className,std::string fieldName,Il2CppObject *instance) {
     Class clazz = Class(NS,className);
@@ -1536,6 +1603,7 @@ T getFieldValue(std::string NS,std::string className,std::string fieldName,Il2Cp
     return field[instance].Get();
 }
 
+// useful, very useful, best useful*2
 template <typename T>
 T callMethod(std::string nameSpace,std::string className,std::string methodName,Il2CppObject *instance) {
     Class clazz = Class(nameSpace,className);
@@ -1544,7 +1612,8 @@ T callMethod(std::string nameSpace,std::string className,std::string methodName,
     return method[instance].Call();
 }
 
-// 定义模板函数 Last，接受通用指针
+// useless, very useless, shit
+// Define the template function Last, which accepts generic pointers
 template <typename T>
 T Last(T* ptr) {
     if (ptr == nullptr) {
@@ -1553,24 +1622,26 @@ T Last(T* ptr) {
     return *ptr;
 }
 
-// 定义模板函数 Last，接受通用引用
+// useless, very useless, shit*2(@@)
+// Define the template function Last, which accepts generic pointers
 template <typename T>
 T Last(T& ref) {
     return ref;
 }
 
-
-std::string FormatFloatToString(float value, std::ostringstream& ss) {
+// To…? I forgot how to use it. ～(￣▽￣～)~
+string FormatFloatToString(float value, std::ostringstream& ss) {
     ss.str("");
     ss.clear();
     ss << std::fixed << std::setprecision(2) << value;
     return ss.str();
 }
+// Bool to string
 std::string BoolToStr(bool value) {
     return value ? "开启" : "关闭";
 }
-
-std::string DifficultyToStr(Difficulty  value) {
+// You're right.But I forgot how to use it, and I don't use it,It's just an example.( •̥́ ˍ •̀ू )
+string DifficultyToStr(Difficulty  value) {
     if (value == Lenient) {
         return "宽松"; //Lenient
     } else if (value == Normal) {
@@ -1582,6 +1653,7 @@ std::string DifficultyToStr(Difficulty  value) {
     }
 }
 
+// The beginning of everything,very very important. ↖(^ω^)↗
 void start() {
     /*
     Image ass = Image("Assembly-CSharp");
@@ -1672,16 +1744,16 @@ void start() {
                 
                 Class PropertyInfoClass = Class("ADOFAI", "PropertyInfo");
 
-    auto ValidateFloat = PropertyInfoClass.GetMethod(
-        "Validate", 
-        {"System.Single"}
-    );
-    HOOK(ValidateFloat, FloatValidate,old_FloatValidate);
-    auto ValidateInt = PropertyInfoClass.GetMethod(
-        "Validate", 
-        {"System.Int32"}
-    );
-    HOOK(ValidateInt, IntValidate,old_IntValidate);
+                auto ValidateFloat = PropertyInfoClass.GetMethod(
+                    "Validate", 
+                    {"System.Single"}
+                );
+                HOOK(ValidateFloat, FloatValidate,old_FloatValidate);
+                auto ValidateInt = PropertyInfoClass.GetMethod(
+                    "Validate", 
+                    {"System.Int32"}
+                );
+                HOOK(ValidateInt, IntValidate,old_IntValidate);
                         BNM_catch(exception)
                         auto name = exception.ClassName();
                             __android_log_print(3,"114514","%s", name.c_str());
